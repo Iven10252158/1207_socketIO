@@ -1,14 +1,14 @@
 <template>
   <div class="about">
     <h1>This is an about page</h1>
-    <h2>{{ begin }}</h2>
-    <input type="text" v-model="msg">
-    <button @click='send'>向3000端口發送數據</button>
-    向3000端口發送數據 : {{ sendData }}
+    <ul v-for = "msg in messages" :key="msg.name">
+      <li><h4>{{ msg.name }} : <span>{{ msg.message }}</span></h4></li>
+    </ul>
+    <h5>{{ typing? '有人輸入中...': '' }}</h5>
+    <input type="text" v-model="temp.name" placeholder="輸入用戶名稱">
+    <input type="text" v-model="temp.message" placeholder="輸入訊息" @input="sendTyping">
+    <button @click='send'>傳送</button>
     <br>
-    <input type="text" v-model="back">
-    <button @click="receive">回傳給3000端口的數據</button>
-    回傳給3000端口的數據 : {{ backData }}
   </div>
 </template>
 
@@ -17,42 +17,39 @@
 export default {
   data () {
     return {
-      msg: 'aaaa',
-      sendData: '',
-      back: '1234',
-      backData: '',
-      begin: ''
+      messages: [],
+      temp: {},
+      typing: false
     }
   },
-  created () {
-    // 進入聊天室時，會收到之前的全部訊息，並更新到 begin
-    this.$socket.on('allMessage', (onData) => {
+  mounted () {
+    // 進入聊天室時，會收到之前的全部訊息，並更新到 messages
+    this.$socket.on('allMessage', (obj) => {
       console.log('received all messages')
-      this.begin = onData
-      console.log(this.begin)
+      this.messages = obj
+    })
+
+    // 設定接收到新訊息的監聽器
+    this.$socket.on('newMessage', obj => {
+      console.log('received new message', obj)
+      this.messages.push(obj)
+    })
+
+    this.$socket.on('someoneIsTyping', value => {
+      console.log('someoneIsTyping', value)
+      this.typing = value
     })
   },
   methods: {
     send () {
-      this.$socket.emit('login', this.msg)
-      this.sendData = this.msg
-      this.msg = ''
-
-      this.$socket.on('loginMsg', function (data) {
-        console.log(data)
-      })
+      console.log('sending new message')
+      console.log(this.messages)
+      this.$socket.emit('sendMessage', this.temp)
+      this.temp.message = ''
     },
-    receive () {
-      this.$socket.emit('return', this.back)
-      this.backData = this.back
-      this.back = ''
-
-      this.$socket.on('returnMsg', function (data) {
-        console.log(data)
-      })
+    sendTyping () {
+      this.$socket.emit('onTyping', this.typing)
     }
   }
-
 }
-
 </script>
